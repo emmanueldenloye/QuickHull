@@ -29,7 +29,7 @@ main = do
             convertPoints . either id (V.fromList . S.toList) $ hull'
     writeFigure
         PNG
-        "QHull.png"
+        "QHullTest.png"
         (600, 600)
         (testFig vx vy hx hy (rxL, rxH) (ryL, ryH))
     -- V.mapM_ print vectors

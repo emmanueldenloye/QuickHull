@@ -12,7 +12,7 @@ main = do
     let vectors =
             V.fromList .
             map UV.fromList .
-            chop 2 . take ((* 2) $ read d :: Int) . randomRs (0 :: Double, 100) $
+            chop 2 . take ((* 2) $ read d :: Int) . randomRs (-100 :: Double, 100) $
             mkStdGen 0
     let hull' = qhull2D vectors
     either

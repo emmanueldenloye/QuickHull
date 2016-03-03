@@ -5,16 +5,14 @@ module QuickHull (qhull2D) where
 
 import           Control.Arrow
 import           Control.Monad
+import           Data.DList                   (DList)
+import qualified Data.DList                   as D
 import           Data.Foldable                (asum)
 import qualified Data.List                    as L (splitAt)
 import           Data.Maybe
 import           Data.Ord
--- import qualified Data.Set                     as S
-import           Data.DList                   as D
--- import           Data.Monoid
 import qualified Data.Vector                  as V
 import           Data.Vector.Algorithms.Intro as I
--- import           Data.Vector.Generic.Mutable  as GM
 import qualified Data.Vector.Unboxed          as UV
 import           Numeric.LinearAlgebra        (peps)
 
@@ -52,7 +50,7 @@ qhull2DInit points =
     (ax, bx) = minMaxXIndexes points
     (ay, by) = minMaxYIndexes points
 
-qhull2DHelper :: UV.Vector Double -> UV.Vector Double -> V.Vector (UV.Vector Double) -> D.DList (UV.Vector Double)
+qhull2DHelper :: UV.Vector Double -> UV.Vector Double -> V.Vector (UV.Vector Double) -> DList (UV.Vector Double)
 qhull2DHelper v w vecs
   | V.length vecs > 1 =
       D.cons maxP $
@@ -83,7 +81,7 @@ rMap
     => b -> V.Vector (b, UV.Vector Double) -> V.Vector (UV.Vector Double)
 rMap r = V.map snd . V.filter ((== r) . fst)
 
--- Assumes points are 2D. Sorts points by their x-coordinates
+-- Sorts points by their x-coordinates
 sortTriangle
     :: UV.Vector Double
     -> UV.Vector Double

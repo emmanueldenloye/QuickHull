@@ -6,6 +6,7 @@
 /test/*.hs~
 /src/*.hs~
 /*.md~
+/*.cabal~
 /*.o
 /*.ps
 /*.prof

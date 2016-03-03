@@ -9,10 +9,12 @@ import           Data.Foldable                (asum)
 import qualified Data.List                    as L (splitAt)
 import           Data.Maybe
 import           Data.Ord
-import qualified Data.Set                     as S
+-- import qualified Data.Set                     as S
+import           Data.DList                   as D
+-- import           Data.Monoid
 import qualified Data.Vector                  as V
 import           Data.Vector.Algorithms.Intro as I
-import           Data.Vector.Generic.Mutable  as GM
+-- import           Data.Vector.Generic.Mutable  as GM
 import qualified Data.Vector.Unboxed          as UV
 import           Numeric.LinearAlgebra        (peps)
 
@@ -22,102 +24,64 @@ data Region2D
     | R012
     deriving (Show,Eq,Ord)
 
-data HullType
-    = Hull { hull :: UV.Vector Double} -- Represents a point that is part of the convex hull.
-    | Test { test :: UV.Vector Double} -- Represents a point needs to be tested.
-    deriving (Eq,Show,Ord)
-
 qhull2D
     :: V.Vector (UV.Vector Double)
-    -> Either (V.Vector (UV.Vector Double)) (S.Set (UV.Vector Double))
+    -> Either (V.Vector (UV.Vector Double)) [UV.Vector Double]
 qhull2D vecs
   | V.length vecs < 4 = Left vecs
   | otherwise =
-      Right . S.map hull $
-      qhull2DHelper (Hull ax) (Hull by) regU021 `S.union`
-      qhull2DHelper (Hull by) (Hull bx) regU201 `S.union`
-      qhull2DHelper (Hull bx) (Hull ay) regB201 `S.union`
-      qhull2DHelper (Hull ax) (Hull ay) regB021
+      Right . D.toList $
+        qhull2DHelper ax by regU021 `mappend`
+        qhull2DHelper by bx regU201 `mappend`
+        qhull2DHelper bx ay regB201 `mappend`
+        qhull2DHelper ax ay regB021
   where
-    ((regU021,regU201),(regB021,regB201)) =
-        (assignTwoRegions *** assignTwoRegions) . splitValidQuad ax by bx ay $
-        V.map unmark marked
-    ([ax,bx,ay,by],marked) = qhull2DInit vecs
-    unmark (Hull v) = v
-    unmark (Test v) = v
-    -- unmark _ = error "You shouldn't get here"
+    ((regU021, regU201), (regB021, regB201)) =
+      (assignTwoRegions *** assignTwoRegions) . splitValidQuad ax by bx ay $
+        vecs
+    [ax, bx, ay, by] = qhull2DInit vecs
 
-markPoints :: V.Vector (UV.Vector Double) -> V.Vector HullType
-markPoints = V.map Test
-
-qhull2DInit :: V.Vector (UV.Vector Double)
-            -> ([UV.Vector Double], V.Vector HullType)
+qhull2DInit :: V.Vector (UV.Vector Double) -> [UV.Vector Double]
 qhull2DInit points =
-    ( [ V.unsafeIndex points ax
-      , V.unsafeIndex points bx
-      , V.unsafeIndex points ay
-      , V.unsafeIndex points by]
-    , marked)
+  [ V.unsafeIndex points ax
+  , V.unsafeIndex points bx
+  , V.unsafeIndex points ay
+  , V.unsafeIndex points by
+  ]
   where
-    (ax,bx) = minMaxXIndexes points
-    (ay,by) = minMaxYIndexes points
-    marked = setMinMax . markPoints $ points
-    setMinMax =
-        V.modify
-            (\w ->
-                  do GM.unsafeModify w toHull ax
-                     GM.unsafeModify w toHull bx
-                     GM.unsafeModify w toHull ay
-                     GM.unsafeModify w toHull by)
-      where
-        toHull (Test x) = Hull x
-        toHull x@_ = x
+    (ax, bx) = minMaxXIndexes points
+    (ay, by) = minMaxYIndexes points
 
-qhull2DHelper :: HullType -> HullType -> V.Vector HullType -> S.Set HullType
-qhull2DHelper (Hull v) (Hull w) vecs
+qhull2DHelper :: UV.Vector Double -> UV.Vector Double -> V.Vector (UV.Vector Double) -> D.DList (UV.Vector Double)
+qhull2DHelper v w vecs
   | V.length vecs > 1 =
-      S.fromList [Hull w0, Hull w1, Hull w2] `S.union`
-      qhull2DHelper (Hull w0) (Hull w1) r021 `S.union`
-      qhull2DHelper (Hull w0) (Hull w2) r012 `S.union`
-      qhull2DHelper (Hull w1) (Hull w2) r201
+      D.cons maxP $
+        qhull2DHelper w0 w1 r021 `mappend`
+        qhull2DHelper w0 w2 r012 `mappend`
+        qhull2DHelper w1 w2 r201
   | V.length vecs == 1 =
-      S.singleton .
-      (\(Test t) ->
-            Hull t) .
-      V.unsafeHead $
-      vecs
-  | otherwise = S.empty
+      D.singleton $
+        V.unsafeHead vecs
+  | otherwise = D.empty
   where
-    (r021,r201,r012) = assignThreeRegions $ splitValidTri w0 w1 w2 testpts
-    [w0,w1,w2] = V.toList . sortTriangle v w $ maxP
-    testpts' = getPreTestPts vecs
-    testpts =
-        V.ifilter
-            (\i _ ->
-                  i /= maxInd)
-            testpts'
-    (maxInd,maxP) = maxDistPt v w testpts'
-qhull2DHelper _ _ _ = error "You shouldn't get here!"
-
-getPreTestPts :: V.Vector HullType -> V.Vector (UV.Vector Double)
-getPreTestPts = V.map test . V.filter pred'
-  where
-    pred' (Test _) = True
-    pred' _ = False
+    (r021, r201, r012) = assignThreeRegions $ splitValidTri w0 w1 w2 testpts
+    [w0, w1, w2] = V.toList . sortTriangle v w $ maxP
+    testpts = V.ifilter (\i _ -> i /= maxInd) vecs
+    (maxInd, maxP) = maxDistPt v w vecs
 
 assignTwoRegions :: V.Vector (Region2D, UV.Vector Double)
-                 -> (V.Vector HullType, V.Vector HullType)
-assignTwoRegions = (,) <$> rMap R021 <*> rMap R201 -- . sortOnFirst
+                 -> (V.Vector (UV.Vector Double), V.Vector (UV.Vector Double))
+assignTwoRegions = (,) <$> rMap R021 <*> rMap R201
 
 assignThreeRegions
     :: V.Vector (Region2D, UV.Vector Double)
-    -> (V.Vector HullType, V.Vector HullType, V.Vector HullType)
-assignThreeRegions = (,,) <$> rMap R021 <*> rMap R201 <*> rMap R012 -- . sortOnFirst
+    -> (V.Vector (UV.Vector Double), V.Vector (UV.Vector Double), V.Vector (UV.Vector Double))
+assignThreeRegions = (,,) <$> rMap R021 <*> rMap R201 <*> rMap R012
 
 rMap
     :: Eq b
-    => b -> V.Vector (b, UV.Vector Double) -> V.Vector HullType
-rMap r = V.map (Test . snd) . V.filter ((== r) . fst)
+    => b -> V.Vector (b, UV.Vector Double) -> V.Vector (UV.Vector Double)
+rMap r = V.map snd . V.filter ((== r) . fst)
 
 -- Assumes points are 2D. Sorts points by their x-coordinates
 sortTriangle

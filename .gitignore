@@ -3,6 +3,8 @@
 /*.hp
 /.gitignore~
 /*.hs~
+/test/*.hs~
+/src/*.hs~
 /*.md~
 /*.o
 /*.ps

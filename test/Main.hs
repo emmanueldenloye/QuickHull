@@ -8,19 +8,14 @@ import           System.Random
 
 main :: IO ()
 main = do
-    [d] <- getArgs
-    let vectors =
+    let d = 10000 :: Int
+      vectors =
             V.fromList .
             map UV.fromList .
-            chop 2 . take ((* 2) $ read d :: Int) . randomRs (-100 :: Double, 100) $
+            chop 2 . take ((* 2) $ d) . randomRs (-100 :: Double, 100) $
             mkStdGen 0
     let hull' = qhull2D vectors
-    either
-        (V.mapM_ print)
-        (\v ->
-              do mapM_ print v
-                 print $ S.size v)
-        hull'
+    either (V.mapM_ print) (mapM_ print) hull'
 
 chop :: Int -> [a] -> [[a]]
 chop n =

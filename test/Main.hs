@@ -15,7 +15,7 @@ main = do
             chop 2 . take ((* 2) $ d) . randomRs (-100 :: Double, 100) $
             mkStdGen 0
     let hull' = qhull2D vectors
-    either (V.mapM_ print) (mapM_ print) hull'
+    mapM_ print hull'
 
 chop :: Int -> [a] -> [[a]]
 chop n =

@@ -25,8 +25,8 @@ main = do
       (vx, vy) = convertPoints vectors
       hull' = qhull2D vectors
       (hx, hy) =
-        convertPoints . either id V.fromList $ hull'
-  writeFigure PNG "QHullTest.png" (600, 600) (testFig vx vy hx hy (rxL, rxH) (ryL, ryH))
+        convertPoints . V.fromList $ hull'
+  writeFigure PNG ("QHullTest" ++ d ++ "Points" ++ ".png") (600, 600) (testFig vx vy hx hy (rxL, rxH) (ryL, ryH))
 
 convertPoints :: V.Vector (UV.Vector Double) -> (Vector Double, Vector Double)
 convertPoints =

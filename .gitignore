@@ -5,6 +5,7 @@
 /*.hs~
 /test/*.hs~
 /src/*.hs~
+/src/*.png
 /*.md~
 /*.cabal~
 /*.o

@@ -24,15 +24,15 @@ data Region2D
 
 qhull2D
     :: V.Vector (UV.Vector Double)
-    -> Either (V.Vector (UV.Vector Double)) [UV.Vector Double]
+    -> [UV.Vector Double]
 qhull2D vecs
-  | V.length vecs < 4 = Left vecs
+  | V.length vecs < 4 = V.toList vecs
   | otherwise =
-      Right . D.toList $
-        qhull2DHelper ax by regU021 `mappend`
-        qhull2DHelper by bx regU201 `mappend`
-        qhull2DHelper bx ay regB201 `mappend`
-        qhull2DHelper ax ay regB021
+      D.toList $ D.fromList [ax, bx, ay, by] `mappend`
+                 qhull2DHelper ax by regU021 `mappend`
+                 qhull2DHelper by bx regU201 `mappend`
+                 qhull2DHelper bx ay regB201 `mappend`
+                 qhull2DHelper ax ay regB021
   where
     ((regU021, regU201), (regB021, regB201)) =
       (assignTwoRegions *** assignTwoRegions) . splitValidQuad ax by bx ay $
